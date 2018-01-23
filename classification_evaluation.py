@@ -25,6 +25,7 @@ import theano.tensor as tt
 import xgboost
 from sklearn.base import TransformerMixin
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
@@ -43,7 +44,7 @@ class DataFrameImputer(TransformerMixin):
 
 
 def def_load_dataset(_name, _features, _label, _use_test_file, _feature_selection):
-    root_folder = "dataset"
+    root_folder = "dataset/classification"
 
     if _use_test_file:
         train_df = pd.read_csv("{0}/{1}/train.csv".format(root_folder, _name))
@@ -121,10 +122,10 @@ def train_bayesian_model(X, y, _use_map):
         step = pm.Metropolis()
         if _use_map:
             map_trace = pm.find_MAP()
-            trace_s = pm.sample(500, start=map_trace, step=step)
+            trace_s = pm.sample(4500, start=map_trace, step=step)
 
         else:
-            trace_s = pm.sample(500, step=step)
+            trace_s = pm.sample(4500, step=step)
 
     if _use_map:
         return trace_s, map_trace
@@ -178,7 +179,13 @@ def eval_baseline_models(_train_X, _test_X, _train_y, _test_y):
     rfc_accr = accuracy_score(_test_y, _pred)
     print("Random Forest accuracy = {0}".format(rfc_accr))
 
-    return xgb_accr, rfc_accr
+    lr = LogisticRegression()
+    lr.fit(_train_X, _train_y)
+    _pred = lr.predict(_test_X)
+    lr_accr = accuracy_score(_test_y, _pred)
+    print("Logistic Regression accuracy = {0}".format(lr_accr))
+
+    return xgb_accr, rfc_accr, lr_accr
 
 
 # def eval_model(train, test, features,):
@@ -197,9 +204,8 @@ datasets = [{"name": "optdigits", "use_test_file": True},
 label = "target"
 
 results = pd.DataFrame(
-    columns=["Dataset", "Features", "XGBoost", "Random Forest Classifier", "Bayesian(without MAP start)",
-             "Bayesian(with MAP start)",
-             "Bayesian(MAP)"])
+    columns=["Dataset", "Features", "XGBoost", "Random Forest Classifier", "Logistic Regression",
+             "Bayesian(without MAP start)", "Bayesian(with MAP start)", "Bayesian(MAP)"])
 for classification_dataset in datasets:
     print("Dataset : {0}".format(classification_dataset))
     train_X, test_X, train_y, test_y = data_loader(**classification_dataset)
@@ -208,15 +214,16 @@ for classification_dataset in datasets:
     features = train_X.columns.tolist()
     print(features)
 
-    xgb_accr, rfc_accr = eval_baseline_models(train_X, test_X, train_y, test_y)
+    xgb_accr, rfc_accr, lr_accr = eval_baseline_models(train_X, test_X, train_y, test_y)
     bayesian_accr, bayesian_map_start_accr, bayesian_map_accr = eval_bayesian_models(train_X, test_X, train_y, test_y)
 
     results.loc[results.shape[0]] = [classification_dataset["name"],
                                      features,
                                      xgb_accr,
                                      rfc_accr,
+                                     lr_accr,
                                      bayesian_accr,
                                      bayesian_map_start_accr,
                                      bayesian_map_accr]
 
-results.to_csv("classification_evaluation.csv")
+results.to_csv("classification_evaluation(4500+500steps).csv")
