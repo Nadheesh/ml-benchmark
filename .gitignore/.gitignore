@@ -1,2 +1,5 @@
-Pycharm files
+# Pycharm files
 /.idea/
+
+# Too large datasets
+/dataset/classification/ida2016challenge/*.csv
