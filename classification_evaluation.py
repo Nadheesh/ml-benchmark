@@ -112,8 +112,8 @@ def feature_selection(data: pd.DataFrame, label_col, num_features=6, criteria="c
 def train_bayesian_model(X, y, _use_map):
     class_count = len(set(y.tolist()))
     with pm.Model() as modelo_s:
-        alfa = pm.Normal('alfa', mu=1, sd=10, shape=class_count)
-        beta = pm.Normal('beta', mu=1, sd=10, shape=(X.shape[1], class_count))
+        alfa = pm.Normal('alfa', mu=0, sd=1, shape=class_count)
+        beta = pm.Normal('beta', mu=0, sd=1, shape=(X.shape[1], class_count))
 
         mu = alfa + pm.math.dot(X, beta)
         p = pm.Deterministic('p', tt.nnet.softmax(mu))
